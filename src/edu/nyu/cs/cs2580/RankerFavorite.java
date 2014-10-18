@@ -1,6 +1,6 @@
 package edu.nyu.cs.cs2580;
 
-import java.util.Vector;
+import java.util.*;
 
 import edu.nyu.cs.cs2580.QueryHandler.CgiArguments;
 import edu.nyu.cs.cs2580.SearchEngine.Options;
@@ -19,8 +19,69 @@ public class RankerFavorite extends Ranker {
     System.out.println("Using Ranker: " + this.getClass().getSimpleName());
   }
 
-  @Override
-  public Vector<ScoredDocument> runQuery(Query query, int numResults) {
-    return null;
-  }
+    @Override
+    public Vector<ScoredDocument> runQuery(Query query, int numResults) {
+        Document doc = null;
+        ScoredDocument scoredDoc = null;
+        int docId = -1;
+        Vector<ScoredDocument> results = new Vector<ScoredDocument>();
+        Queue<ScoredDocument> retrieval_results = new PriorityQueue<ScoredDocument>(numResults);
+        while((doc = _indexer.nextDoc(query, docId)) != null) {
+          retrieval_results.add(runqueryQL(query, doc._docid));
+          if(numResults < retrieval_results.size()) {
+              retrieval_results.poll();
+          }
+          docId = doc._docid;
+        }
+
+        while ((scoredDoc = retrieval_results.poll()) != null) {
+          results.add(scoredDoc);
+        }
+        Collections.sort(results, Collections.reverseOrder());
+        return results;
+    }
+
+    /**
+     * Method for scoring documents based on QL
+     * @param query the query words
+     * @param did the document id
+     * @return the scored document
+     */
+    public ScoredDocument runqueryQL(Query query, int did) {
+        float lambda = 0.5f, score = 0.0f;
+        DocumentIndexed d = (DocumentIndexed) _indexer.getDoc(did);
+        Vector<String> qv = new Vector<String>();
+        for(String str: query._tokens) {
+            //Check the token for spaces and handle them accordingly
+            String[] temp = str.split(" ");
+            if(temp.length > 1) {
+                for (String term : temp) {
+                    qv.add(term);
+                }
+            } else {
+                qv.add(str);
+            }
+        }
+
+        for(String q: qv) {
+            int docTerFreq, corpusTerFreq;
+            long totWordsInDoc, totWordsInCorp;
+            double cumulativeVal = 0.0;
+            docTerFreq = _indexer.documentTermFrequency(q, Integer.toString(d._docid));
+            corpusTerFreq = _indexer.corpusTermFrequency(q);
+            totWordsInDoc = d.getNumberOfWords();
+            totWordsInCorp =  _indexer.totalTermFrequency();
+
+            if(totWordsInDoc != 0) {
+                cumulativeVal += (1-lambda) * (docTerFreq/totWordsInDoc);
+            }
+
+            if (totWordsInCorp != 0) {
+                cumulativeVal += (lambda) * (corpusTerFreq/totWordsInCorp);
+            }
+            score += (Math.log(cumulativeVal)/Math.log(2));
+        }
+
+        return new ScoredDocument(d, Math.pow(2, score));
+    }
 }
