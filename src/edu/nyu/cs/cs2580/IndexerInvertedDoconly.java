@@ -164,8 +164,9 @@ public class IndexerInvertedDoconly extends Indexer {
    public int max(Set<Integer> param_docids){
        int max=0;
        for(int i=0;i<param_docids.size();i++){
-           if (param_docids.get(i)>max){
-               max = param_docids.get(i);
+           int temp =param_docids.iterator().next();
+           if (temp>max){
+               max = temp;
            }
        }
        return max;
