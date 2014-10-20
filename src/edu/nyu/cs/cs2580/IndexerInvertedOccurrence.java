@@ -153,8 +153,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         int c = 0;
 
         while(indexIt.hasNext()) {
-            c++;
-            if(c==4) break;
+            //c++;
+            //if(c==4) break;
             Integer key = indexIt.next();
 
             indexWriter.write(key.toString());
@@ -192,10 +192,11 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     private void mergeAllFiles() throws IOException {
         String indexFile = "/invertedIndexOccurrence.tsv";
+        mergeIndexFiles();
         StringBuilder mergebuilder = new StringBuilder(_options._indexPrefix).append(indexFile);
         BufferedWriter mergeWriter = new BufferedWriter(new FileWriter(mergebuilder.toString(), true));
 
-        mergeIndexFiles();
+
 
         //Delimiter for next data structure in the index - 10 '#' symbols
         mergeWriter.write("##########");
@@ -240,6 +241,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             try {
                 mergeTwoFiles("first.tsv", i + "tempIndex.tsv");
             }catch (Exception e) {
+                System.out.println("IM DEAD");
                 e.printStackTrace();
             }
         }
@@ -249,6 +251,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     }
 
     private void mergeTwoFiles(String firstFile, String secondFile) throws IOException {
+
+        try{
         System.out.println(firstFile + " " + secondFile);
 
         StringBuilder mergebuilder = new StringBuilder(_options._indexPrefix).append("/temp.tsv");
@@ -279,15 +283,18 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         }
 
         String firstline = firstReader.readLine(), secondline = secondReader.readLine();
-        System.out.println("firstline "+ firstline);
+       // System.out.println("firstline "+ firstline);
         //System.out.println(secondline);
 
         int prevTermId = -1;
-        while((secondline != null) || (firstline != null)) {
-            System.out.println("Here");
+        while((secondline != null) && (firstline != null)) {
             List<String> secondlist = null, firstlist=null;
             if(firstline != null) {
                 firstlist = stringTokenizer(firstline);
+            } else {
+                mergeWriter.write(secondline);
+                secondline=firstReader.readLine();
+                continue;
             }
 
             if(secondline != null) {
@@ -299,8 +306,11 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             }
 
             if(firstlist.size() == 1 || secondlist.size() ==1 ) {
+               // System.out.println("CUrrent term id: "+ firstlist.get(0)+" "+ secondlist.get(0));
                 if(Integer.parseInt(firstlist.get(0))>Integer.parseInt(secondlist.get(0))
                         && (Integer.parseInt(secondlist.get(0))>prevTermId)) {
+                   // System.out.print("\n write secondfile");
+
                     mergeWriter.write(secondlist.get(0)+"\n");
                     secondline = secondReader.readLine();
                     secondlist = stringTokenizer(secondline);
@@ -310,16 +320,25 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                         secondlist = stringTokenizer(secondline);
                     }
                 } else if (Integer.parseInt(firstlist.get(0)) < Integer.parseInt(secondlist.get(0))) {
+
+                  //  System.out.print("\n write firstfile");
+
+
                     prevTermId = Integer.parseInt(firstlist.get(0));
                     mergeWriter.write(firstlist.get(0)+"\n");
                     firstline = firstReader.readLine();
                     firstlist = stringTokenizer(firstline);
-                    while(firstlist.size()>1) {
-                        mergeWriter.write(firstline+"\n");
-                        firstline = firstReader.readLine();
+                    String check = firstline;
+                    while(firstlist.size()>1 && (firstline = firstReader.readLine())!=null) {
+                        mergeWriter.write(check+"\n");
+                        check = firstline;
+                      //  System.out.println("Awesome");
                         firstlist = stringTokenizer(firstline);
                     }
+
                 } else {
+
+                   // System.out.print("\n EQUAL");
                     mergeWriter.write(firstlist.get(0)+"\n");
                     firstline = firstReader.readLine();
                     firstlist = stringTokenizer(firstline);
@@ -339,9 +358,30 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                 }
             }
         }
+
+        if(firstline!=null) {
+            while(firstline!=null) {
+                mergeWriter.write(firstline+"\n");
+                firstline=firstReader.readLine();
+            }
+            //System.out.print("I am not okay");
+        }
+
+        if(secondline!=null) {
+            while(secondline!=null) {
+                mergeWriter.write(secondline+"\n");
+                secondline=secondReader.readLine();
+            }
+          //  System.out.print("I am okay");
+        }
+
         mergeWriter.close();
         firstReader.close();
         secondReader.close();
+        }catch(IOException e)
+        { System.out.println("IM DEAD AGAIN");
+
+        }
     }
 
     private List<String> stringTokenizer(String str) {
