@@ -92,7 +92,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             documentIndexed.setNumberOfWords(numWords);
             _documents.put(indexCount, documentIndexed);
         }
-
     }
 
 
@@ -256,7 +255,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             try {
                 mergeTwoFiles("first.tsv", i + "tempIndex.tsv");
             }catch (Exception e) {
-                System.out.println("IM DEAD");
                 e.printStackTrace();
             }
         }
@@ -268,8 +266,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     private void mergeTwoFiles(String firstFile, String secondFile) throws IOException {
 
         try{
-        System.out.println(firstFile + " " + secondFile);
-
         StringBuilder mergebuilder = new StringBuilder(_options._indexPrefix).append("/temp.tsv");
         BufferedWriter mergeWriter = new BufferedWriter(new FileWriter(mergebuilder.toString(), true));
 
@@ -381,8 +377,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         firstReader.close();
         secondReader.close();
         }catch(IOException e)
-        { System.out.println("IM DEAD AGAIN");
-
+        {
+            e.printStackTrace();
         }
     }
 
@@ -399,10 +395,10 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         String[] words = document.split(" ");
         for (int i=0; i<words.length; i++) {
             String lower = words[i].toLowerCase();
-            lower.replace("\"","");
+            lower.replace("\""," ").trim();
             Vector<String> stopWords = new StopWords().getStopWords();
             String term = PorterStemming.getStemmedWord(lower);
-            if(!stopWords.contains(term) && term!=" ") {
+            if(!stopWords.contains(term) && term != " " && term.length()>1) {
                 if (!dictionary.containsKey(term)) {
                     dictionary.put(term, uniqueTermNum);
 
@@ -410,7 +406,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                     occurrence.add(indexCount);
                     occurrence.add(1);
                     occurrence.add(i);
-
                     index.put(uniqueTermNum, occurrence);
 
                     trackerList.add(0);
@@ -474,7 +469,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                                 _documents.put(docid, documentIndexed);
                             }
                         }
-                        System.out.println(_documents.size());
                     } else if(hashcount==2) {
                         loadDictionary(br);
                     }
@@ -496,7 +490,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                         if(cacheCount==500) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
                             index.put(new Integer(key), value);
-                            System.out.println("Index size is "+index.size());
+                            System.out.println("Index size is " + index.size());
                             loadCache = false;
                             indexDone = true;
                         }
@@ -528,8 +522,12 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     public void loadDictionary(BufferedReader br) throws IOException, ClassNotFoundException {
         String dictionaryString = br.readLine();
-        if (dictionaryString != null ) {
-            dictionary.put(scanner.next(), Integer.parseInt(scanner.next()));
+        while (dictionaryString != null) {
+            List<String> dictList = stringTokenizer(dictionaryString);
+            if(dictList.size()==2) {
+                dictionary.put(dictList.get(0), Integer.parseInt(dictList.get(1)));
+            }
+            dictionaryString = br.readLine();
         }
 
     }
