@@ -23,6 +23,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     private int partialFileCount = 0;
     int uniqueTermNum = 0;
+    private int globalIndexCount = 0;
+    private boolean loadCache = false;
 
     public IndexerInvertedOccurrence(Options options) {
         super(options);
@@ -123,8 +125,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
         Set<Entry<String, Integer>> dictEntrySet = dictionary.entrySet();
         for(Entry<String, Integer> dictEntry : dictEntrySet) {
-            dictWriter.write(dictEntry.getKey()+" ");
-            dictWriter.write(dictEntry.getValue()+" ");
+            dictWriter.write(dictEntry.getKey()+"\t");
+            dictWriter.write(dictEntry.getValue()+"\n");
         }
         dictWriter.newLine();
         dictWriter.close();
@@ -150,11 +152,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         //Iterate over the sorted keyList
         Iterator<Integer> indexIt = indexKeysList.iterator();
 
-        int c = 0;
-
         while(indexIt.hasNext()) {
-            //c++;
-            //if(c==4) break;
+
             Integer key = indexIt.next();
 
             indexWriter.write(key.toString());
@@ -199,7 +198,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
 
         //Delimiter for next data structure in the index - 10 '#' symbols
-        mergeWriter.write("##########");
+        mergeWriter.write("##########\n");
 
         //Read from DocMap.tsv
         StringBuilder docbuilder = new StringBuilder(_options._indexPrefix).append("/").append("DocMap.tsv");
@@ -215,6 +214,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
         //Delimiter for next data structure in the index - 10 '#' symbols
         mergeWriter.write("##########\n");
+        mergeWriter.write("##########\n");
 
         //Read from Dictionary.tsv
         StringBuilder dictbuilder = new StringBuilder(_options._indexPrefix).append("/").append("Dictionary.tsv");
@@ -226,13 +226,9 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
         dictReader.close();
 
-
-
-        //Delimiter for next data structure in the index - 10 '#' symbols
-        mergeWriter.write("##########\n");
         mergeWriter.close();
 
-        deleteTempFiles();
+        //deleteTempFiles();
     }
 
     private void deleteTempFiles() throws  IOException {
@@ -302,8 +298,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         }
 
         String firstline = firstReader.readLine(), secondline = secondReader.readLine();
-       // System.out.println("firstline "+ firstline);
-        //System.out.println(secondline);
 
         int prevTermId = -1;
         while((secondline != null) && (firstline != null)) {
@@ -325,10 +319,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             }
 
             if(firstlist.size() == 1 || secondlist.size() ==1 ) {
-               // System.out.println("CUrrent term id: "+ firstlist.get(0)+" "+ secondlist.get(0));
                 if(Integer.parseInt(firstlist.get(0))>Integer.parseInt(secondlist.get(0))
                         && (Integer.parseInt(secondlist.get(0))>prevTermId)) {
-                   // System.out.print("\n write secondfile");
 
                     mergeWriter.write(secondlist.get(0)+"\n");
                     secondline = secondReader.readLine();
@@ -339,10 +331,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                         secondlist = stringTokenizer(secondline);
                     }
                 } else if (Integer.parseInt(firstlist.get(0)) < Integer.parseInt(secondlist.get(0))) {
-
-                  //  System.out.print("\n write firstfile");
-
-
                     prevTermId = Integer.parseInt(firstlist.get(0));
                     mergeWriter.write(firstlist.get(0)+"\n");
                     firstline = firstReader.readLine();
@@ -351,13 +339,10 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                     while(firstlist.size()>1 && (firstline = firstReader.readLine())!=null) {
                         mergeWriter.write(check+"\n");
                         check = firstline;
-                      //  System.out.println("Awesome");
                         firstlist = stringTokenizer(firstline);
                     }
 
                 } else {
-
-                   // System.out.print("\n EQUAL");
                     mergeWriter.write(firstlist.get(0)+"\n");
                     firstline = firstReader.readLine();
                     firstlist = stringTokenizer(firstline);
@@ -383,7 +368,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                 mergeWriter.write(firstline+"\n");
                 firstline=firstReader.readLine();
             }
-            //System.out.print("I am not okay");
         }
 
         if(secondline!=null) {
@@ -391,7 +375,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                 mergeWriter.write(secondline+"\n");
                 secondline=secondReader.readLine();
             }
-          //  System.out.print("I am okay");
         }
 
         mergeWriter.close();
@@ -416,9 +399,10 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         String[] words = document.split(" ");
         for (int i=0; i<words.length; i++) {
             String lower = words[i].toLowerCase();
+            lower.replace("\"","");
             Vector<String> stopWords = new StopWords().getStopWords();
             String term = PorterStemming.getStemmedWord(lower);
-            if(!stopWords.contains(term)) {
+            if(!stopWords.contains(term) && term!=" ") {
                 if (!dictionary.containsKey(term)) {
                     dictionary.put(term, uniqueTermNum);
 
@@ -446,7 +430,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                         trackerList.set(termId, latestPosition);
                         occurrence.add(1);
                         occurrence.add(i);
-
                     }
                 }
                 _totalTermFrequency++;
@@ -457,6 +440,98 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     @Override
     public void loadIndex() throws IOException, ClassNotFoundException {
+        int cacheCount = 0;
+        int key = 0;
+        ArrayList<Integer> value = new ArrayList<Integer>();
+
+        System.out.println("Loading Index ");
+        StringBuilder builder = new StringBuilder(_options._indexPrefix).append("/").append("invertedIndexOccurrence.tsv");
+        try
+        {
+            FileInputStream in = new FileInputStream(builder.toString());
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            boolean indexDone = false;
+            String line = br.readLine();
+            int hashcount = 0;
+            while (line != null) {
+                if(line.equals("##########")) {
+                    globalIndexCount=0;
+                    hashcount++;
+                    if(hashcount==1) {
+                        System.out.println("Loading Document map");
+                        while(line!=null) {
+                            line=br.readLine();
+                            if(line.equals("##########")) {
+                                break;
+                            }
+                            Scanner scanner = new Scanner(line).useDelimiter("\t");
+                            while (scanner.hasNext()) {
+                                int docid = Integer.parseInt(scanner.next());
+                                DocumentIndexed documentIndexed = new DocumentIndexed(docid);
+                                documentIndexed.setTitle(scanner.next());
+                                documentIndexed.setUrl(scanner.next());
+                                documentIndexed.setNumberOfWords(Long.parseLong(scanner.next()));
+                                _documents.put(docid, documentIndexed);
+                            }
+                        }
+                        System.out.println(_documents.size());
+                    } else if(hashcount==2) {
+                        loadDictionary(br);
+                    }
+                } else if(!indexDone) {
+                    int forwardCount = 0;
+                    while(line!=null && loadCache && forwardCount <= globalIndexCount) {
+                        System.out.println("Inside the forward loop "+forwardCount);
+                        br.readLine();
+                        forwardCount++;
+                    }
+
+                    //Always in else to load the index first
+                    List<String> stringList = stringTokenizer(line);
+                    if(stringList.size() == 1) {
+                        if(cacheCount!=0) {
+                            //System.out.println("Key is " + key + " value is "+value.get(0));
+                            index.put(new Integer(key), value);
+                        }
+                        if(cacheCount==500) {
+                            //System.out.println("Key is " + key + " value is "+value.get(0));
+                            index.put(new Integer(key), value);
+                            System.out.println("Index size is "+index.size());
+                            loadCache = false;
+                            indexDone = true;
+                        }
+                        key = Integer.parseInt(stringList.get(0));
+
+                        cacheCount++;
+                        globalIndexCount++;
+                    } else {
+                        for(String s: stringList) {
+                            value.add(Integer.parseInt(s));
+                        }
+                    }
+                }
+                line = br.readLine();
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+            System.out.println(e);
+        }
+
+
+    }
+
+    public void loadToCache() throws IOException, ClassNotFoundException {
+        loadCache = true;
+        loadIndex();
+    }
+
+    public void loadDictionary(BufferedReader br) throws IOException, ClassNotFoundException {
+        String dictionaryString = br.readLine();
+        if (dictionaryString != null ) {
+            dictionary.put(scanner.next(), Integer.parseInt(scanner.next()));
+        }
+
     }
 
     @Override
