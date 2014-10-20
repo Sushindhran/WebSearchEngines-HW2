@@ -214,7 +214,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         docMapReader.close();
 
         //Delimiter for next data structure in the index - 10 '#' symbols
-        mergeWriter.write("##########");
+        mergeWriter.write("##########\n");
 
         //Read from Dictionary.tsv
         StringBuilder dictbuilder = new StringBuilder(_options._indexPrefix).append("/").append("Dictionary.tsv");
@@ -226,8 +226,27 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
         dictReader.close();
 
+
+
         //Delimiter for next data structure in the index - 10 '#' symbols
-        mergeWriter.write("##########");
+        mergeWriter.write("##########\n");
+        mergeWriter.close();
+
+        deleteTempFiles();
+    }
+
+    private void deleteTempFiles() throws  IOException {
+        String finalIndexFile = "invertedIndexOccurrence.tsv";
+        File indexFolder = new File(_options._indexPrefix);
+        File[] listOfFiles = indexFolder.listFiles();
+
+        //Delete ever file except invertedIndexOccurence.tsv
+
+        for(File eachFile : listOfFiles) {
+            if(!eachFile.getName().equals(finalIndexFile)) {
+                eachFile.delete();
+            }
+        }
     }
 
     private void mergeIndexFiles() throws IOException {
