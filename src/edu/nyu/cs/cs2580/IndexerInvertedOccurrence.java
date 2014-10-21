@@ -227,7 +227,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
         mergeWriter.close();
 
-        //deleteTempFiles();
+        deleteTempFiles();
     }
 
     private void deleteTempFiles() throws  IOException {
@@ -448,9 +448,22 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             boolean indexDone = false;
             String line = br.readLine();
             int hashcount = 0;
+            if(loadCache) {
+                int forwardCount = 0;
+                while(line!=null && line!="##########" && forwardCount<globalIndexCount) {
+                    List<String> stringList = stringTokenizer(line);
+                    if(stringList.size() == 1) {
+                        forwardCount++;
+                    }
+                    line=br.readLine();
+                }
+
+            }
             while (line != null) {
-                if(line.equals("##########")) {
-                    globalIndexCount=0;
+                if(line.equals("##########") && !loadCache) {
+                    System.out.println("Global count total "+globalIndexCount);
+                    System.out.println("Global count total "+globalIndexCount);
+                    System.out.println("Global count total "+globalIndexCount);
                     hashcount++;
                     if(hashcount==1) {
                         System.out.println("Loading Document map");
@@ -473,27 +486,28 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                         loadDictionary(br);
                     }
                 } else if(!indexDone) {
-                    int forwardCount = 0;
-                    while(line!=null && loadCache && forwardCount <= globalIndexCount) {
-                        System.out.println("Inside the forward loop "+forwardCount);
-                        br.readLine();
-                        forwardCount++;
-                    }
+                   // System.out.println("Here");
 
                     //Always in else to load the index first
                     List<String> stringList = stringTokenizer(line);
                     if(stringList.size() == 1) {
                         if(cacheCount!=0) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
-                            index.put(new Integer(key), value);
+                            //index.put(new Integer(key), value);
                         }
-                        if(cacheCount==500) {
+
+                        //if(cacheCount==10000) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
-                            index.put(new Integer(key), value);
-                            System.out.println("Index size is " + index.size());
-                            loadCache = false;
-                            indexDone = true;
-                        }
+                            //index.put(new Integer(key), value);
+                            //System.out.println("Current index size is " + index.size());
+                            if(globalIndexCount<10000){
+                                loadCache = false;
+                            }
+
+                            //globalIndexCount--;
+                            //indexDone = true;
+                       // }
+
                         key = Integer.parseInt(stringList.get(0));
 
                         cacheCount++;
@@ -506,17 +520,18 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                 }
                 line = br.readLine();
             }
-
+            br.close();
+            in.close();
         }catch(Exception e){
             e.printStackTrace();
             System.out.println(e);
         }
-
-
     }
 
     public void loadToCache() throws IOException, ClassNotFoundException {
         loadCache = true;
+        //Clear before loading into cache again.
+        index.clear();
         loadIndex();
     }
 
@@ -529,11 +544,45 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             }
             dictionaryString = br.readLine();
         }
+        System.out.println("Dictionary loaded from index "+ dictionary.size()+ " terms");
+    }
 
+    public boolean checkIndexForTerm(int termId) {
+
+        while(globalIndexCount!=0) {
+
+            if (index.containsKey(termId)) {
+
+                return true;
+            } else {
+                if(globalIndexCount>termId){
+                    System.out.println("Exiting and returning false "+ globalIndexCount);
+                    return false;
+                }
+                try{
+                    System.out.println("Before Loading "+ globalIndexCount);
+                    loadToCache();
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return false;
+    }
+
+    public List<Integer> getTerm(int termId) {
+        if(checkIndexForTerm(termId)) {
+            return index.get(termId);
+        } else {
+            return null;
+        }
     }
 
     @Override
     public Document getDoc(int docid) {
+        if (_documents.containsKey(docid)) {
+            return _documents.get(docid);
+        }
         return null;
     }
 
@@ -542,22 +591,250 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
      */
     @Override
     public Document nextDoc(Query query, int docid) {
-        return null;
+        if(query instanceof QueryPhrase){
+            return nextDocForPhrase(query, docid);
+        }
+        else{
+            return nextDocForSimple(query, docid);
+        }
     }
+
+    public Document nextDocForSimple(Query query, int docid) {
+        int maxDocId = 0;
+        int start = 1, end = 1;
+        for(String q: query._tokens){
+            int nextDocId = next(q,docid);
+            if( nextDocId < 0){
+                return null;
+            }
+            if(start ==0 && maxDocId != nextDocId){
+                end = 0;
+                if(maxDocId < nextDocId){
+                    maxDocId = nextDocId;
+                }
+            }
+            else if(start == 1){
+                maxDocId = nextDocId;
+                start = 0;
+            }
+        }
+        if( end ==1 ){
+            return _documents.get(maxDocId);
+        }
+        return nextDocForSimple(query, maxDocId - 1);
+    }
+
+    public int next(String word, int docId){
+        if( (word == null) || (word.trim().length() == 0) ){
+            return -1;
+        }
+        int termId = dictionary.get(word);
+        if(termId < 0){
+            return -1;
+        }
+        // valueList is the list of docIDS for the word.
+        List<Integer> docOccLocList = getTerm(termId);
+        int location = -1;
+        for(int i=0;i < docOccLocList.size(); ){
+            if(docOccLocList.get(i) == docId){
+                location = i;
+            }
+            else{
+                i = i+ docOccLocList.get(i+1) + 2;
+            }
+        }
+        if(location == -1){
+            return -1;
+        }
+        location = location +  docOccLocList.get(location+1) + 2 ;
+        return docOccLocList.get(location);
+    }
+
+    private DocumentIndexed nextDocForPhrase(Query query, int docid){
+        Set<Integer> checkSet = new HashSet<Integer>();
+        DocumentIndexed phraseDoc = (DocumentIndexed)nextDocForSimple(query, docid);
+        if(phraseDoc == null){
+            return null;
+        }
+        boolean phraseExists = Boolean.FALSE;
+        if(query._tokens.size() > 1) {
+            if (!dictionary.containsKey(query._tokens.iterator().next())) {
+                return null;
+            }
+            Iterator it = query._tokens.iterator();
+            int maxDocId = 0;
+            boolean first = true;
+            boolean wholePhrase = false;
+            while (it.hasNext()) {
+                wholePhrase = false;
+                int nextDocId = next(it.next().toString(), docid);
+                if (nextDocId < 0) {
+                    return null;
+                }
+                if (first) {
+                    maxDocId = nextDocId;
+                    first = false;
+                }
+                if (nextDocId != maxDocId) {
+                    if (maxDocId < nextDocId) {
+                        maxDocId = nextDocId;
+                    }
+                    return nextDocForPhrase(query, maxDocId - 1);
+                } else {
+                    wholePhrase = true;
+                }
+            }
+            if (wholePhrase) {
+                Iterator it2 = query._tokens.iterator();
+                int termId = dictionary.get(it2.next());
+                List<Integer> docOccLocList = getTerm(termId);
+                int location = -1;
+                for (int i = 0; i < docOccLocList.size(); ) {
+                    if (docOccLocList.get(i) == maxDocId) {
+                        location = i;
+                    } else {
+                        i = i + docOccLocList.get(i + 1) + 2;
+                    }
+                }
+                if (location == -1) {
+                    return null;
+                }
+
+                for (int i = 0; i < docOccLocList.get(location + 1); i++) {
+                    checkSet.add(docOccLocList.get(location + 2 + i) + 1);
+                }
+
+                int counter = -1;
+
+                boolean tokenpresent = false;
+                while (it2.hasNext()) {
+                    counter++;
+                    int termId2 = dictionary.get(it2.next().toString());
+                    List<Integer> docOccLocList2 = getTerm(termId2);
+                    int location2 = -1;
+                    for (int i = 0; i < docOccLocList2.size(); ) {
+                        if (docOccLocList2.get(i) == maxDocId) {
+                            location2 = i;
+                        } else {
+                            i = i + docOccLocList2.get(i + 1) + 2;
+                        }
+                    }
+                    if (location2 == -1) {
+                        return null;
+                    }
+
+                    for (int i = 0; i < docOccLocList2.get(location2 + 1); i++) {
+                        if (checkSet.contains(docOccLocList2.get(location2 + 2 + i) + counter)) {
+                            tokenpresent = true;
+                            if (i == docOccLocList2.get(location2 + 1) - 1) {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (tokenpresent) {
+                        tokenpresent = false;
+                        continue;
+                    } else {
+                        return nextDocForPhrase(query, maxDocId - 1);
+                    }
+
+                }
+
+                if (tokenpresent) {
+                    return _documents.get(maxDocId);
+                }
+            } else {
+                return nextDocForPhrase(query, maxDocId - 1);
+            }
+        }
+            return phraseDoc;
+        }
 
     @Override
     public int corpusDocFrequencyByTerm(String term) {
+
+        if (dictionary.containsKey(term)) {
+            int termid = dictionary.get(term);
+            if (checkIndexForTerm(termid)) {
+                List<Integer> occurrence = index.get(termid);
+                int documentCount = 0;
+                int i=0;
+                while (i < occurrence.size()) {
+                    i=i+occurrence.get(i+1)+1;
+                    documentCount = documentCount + 1;
+                }
+                return documentCount;
+            }
+            return 0;
+        }
         return 0;
     }
 
+
     @Override
     public int corpusTermFrequency(String term) {
+        if (dictionary.containsKey(term)) {
+            int termid = dictionary.get(term);
+            if (checkIndexForTerm(termid)) {
+                List<Integer> occurrence = index.get(termid);
+                int corpusTermFreq = 0;
+                int i=0;
+                while (i < occurrence.size()) {
+                    i=i+occurrence.get(i+1)+2;
+                    corpusTermFreq = corpusTermFreq + occurrence.get(i+1);
+                }
+                return corpusTermFreq;
+            }
+            return 0;
+        }
         return 0;
     }
 
     @Override
     public int documentTermFrequency(String term, String url) {
-        SearchEngine.Check(false, "Not implemented!");
+
+        int documentId = -1;
+        for (int docid : _documents.keySet()) {
+            if (_documents.get(docid).getUrl().equals(url)) {
+                documentId = docid;
+            }
+        }
+        if (documentId == -1) {
+            return 0;
+        }
+
+
+        if (dictionary.containsKey(term)) {
+            int termid = dictionary.get(term);
+            if (checkIndexForTerm(termid)) {
+                List<Integer> occurrence = index.get(termid);
+                int docTermFreq = 0;
+                int i=0;
+                while (i < occurrence.size()) {
+                    i=i+occurrence.get(i+1)+2;
+                    if (documentId == i) {
+                        docTermFreq=occurrence.get(i+1);
+                        break;
+                    }
+                }
+                return docTermFreq;
+            }
+            return 0;
+        }
         return 0;
+    }
+
+    public static void main(String args[]) {
+        try {
+            IndexerInvertedOccurrence ind = new IndexerInvertedOccurrence(new Options("conf/engine.conf"));
+            ind.loadIndex();
+            //int term = ind.dictionary.get("web");
+            //System.out.println("Term is "+term + " "+ind.globalIndexCount);
+            //boolean result = ind.checkIndexForTerm(term);
+            //System.out.println(result);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }
