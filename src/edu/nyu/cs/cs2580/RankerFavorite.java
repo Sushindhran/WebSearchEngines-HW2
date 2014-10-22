@@ -56,7 +56,6 @@ public class RankerFavorite extends Ranker {
         float lambda = 0.5f, score = 0.0f;
         DocumentIndexed d = (DocumentIndexed) _indexer.getDoc(did);
         Vector<String> qv = new Vector<String>();
-        System.out.println("Query size is "+query._tokens.size());
         for(String str: query._tokens) {
             //Check the token for spaces and handle them accordingly
             System.out.println(str);
@@ -73,12 +72,16 @@ public class RankerFavorite extends Ranker {
 
 
         for(String q: qv) {
+            System.out.println("IN here in the second loop in ranker fav "+ d._docid + " url "+d.getUrl());
             int docTerFreq, corpusTerFreq;
             long totWordsInDoc, totWordsInCorp;
             double cumulativeVal = 0.0;
-            docTerFreq = _indexer.documentTermFrequency(q, Integer.toString(d._docid));
+            docTerFreq = _indexer.documentTermFrequency(q, (d.getUrl()));
+            System.out.println("Doc term freq is "+ docTerFreq);
             corpusTerFreq = _indexer.corpusTermFrequency(q);
+            System.out.println("Doc term freq is "+ corpusTerFreq);
             totWordsInDoc = d.getNumberOfWords();
+            System.out.println("Doc term freq is "+ totWordsInDoc);
             totWordsInCorp =  _indexer.totalTermFrequency();
 
             if(totWordsInDoc != 0) {
