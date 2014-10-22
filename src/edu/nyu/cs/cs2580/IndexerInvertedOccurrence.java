@@ -458,9 +458,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             }
             while (line != null) {
                 if(line.equals("##########") && !loadCache) {
-                    System.out.println("Global count total "+globalIndexCount);
-                    System.out.println("Global count total "+globalIndexCount);
-                    System.out.println("Global count total "+globalIndexCount);
                     hashcount++;
                     if(hashcount==1) {
                         System.out.println("Loading Document map");
@@ -499,11 +496,11 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                             index.put(new Integer(key), value);
                         }
 
-                        if(cacheCount==80000) {
+                        if(cacheCount==500) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
                             index.put(new Integer(key), value);
                             //System.out.println("Current index size is " + index.size());
-                            if(globalIndexCount<80000) {
+                            if(globalIndexCount<500) {
                                 loadCache = false;
                             }
                             globalIndexCount--;
@@ -538,10 +535,13 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     }
 
     public void loadDictionary(BufferedReader br) throws IOException, ClassNotFoundException {
+        System.out.println("Loading dictionary");
         String dictionaryString = br.readLine();
+        int count = 0;
         while (dictionaryString != null) {
             List<String> dictList = stringTokenizer(dictionaryString);
             if(dictList.size()==2) {
+                System.out.println(count++);
                 dictionary.put(dictList.get(0), Integer.parseInt(dictList.get(1)));
             }
             dictionaryString = br.readLine();
@@ -554,12 +554,10 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         while(globalIndexCount!=0) {
 
             if (index.containsKey(termId)) {
-                if(globalIndexCount>dictionary.size()){
-                    globalIndexCount = 0;
-                }
                 return true;
             } else {
-                if(globalIndexCount>termId){
+                if(globalIndexCount>dictionary.size()){
+                    globalIndexCount = 0;
                     System.out.println("Exiting and returning false "+ globalIndexCount);
                     return false;
                 }
@@ -833,7 +831,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         try {
             IndexerInvertedOccurrence ind = new IndexerInvertedOccurrence(new Options("conf/engine.conf"));
             ind.loadIndex();
-            boolean result = ind.checkIndexForTerm(1711131);
+            boolean result = ind.checkIndexForTerm(1911131);
             System.out.println(result);
         } catch (Exception e){
             e.printStackTrace();
