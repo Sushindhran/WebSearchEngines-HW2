@@ -497,19 +497,19 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                         if(cacheCount!=0) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
                             index.put(new Integer(key), value);
-                            //if(key==1711131) {
-                            System.out.println("For web in load index "+key +" "+value);
-                            //}
+                            if(key==1711131) {
+                                System.out.println("For web in load index "+key +" "+value);
+                            }
                             value = new ArrayList<Integer>();
 
                         }
 
-                        if(cacheCount==5000000) {
+                        if(cacheCount==500) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
                             index.put(new Integer(key), value);
                             value = new ArrayList<Integer>();
                             //System.out.println("Current index size is " + index.size());
-                            if(globalIndexCount<5000000) {
+                            if(globalIndexCount<500) {
                                 loadCache = false;
                             }
                             globalIndexCount--;
@@ -563,7 +563,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     }
 
     public boolean checkIndexForTerm(int termId) {
-
+        System.out.println("In check index for term");
         while(globalIndexCount!=0) {
 
             if (index.containsKey(termId)) {
@@ -660,9 +660,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             System.out.println("Found term "+ docOccLocList.size());
         }
 
-        System.out.println("Found term "+ docOccLocList.get(0));
-        System.out.println("Found term "+ docOccLocList.get(1));
-        System.out.println("Found term "+ docOccLocList.get(2));
         if(docId == -1) {
             docId = docOccLocList.get(0);
         }
@@ -670,9 +667,9 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
         int location = -1;
         for(int i=0; i < docOccLocList.size(); ){
-            //System.out.print(i+" "+docOccLocList.get(i));
             if(docOccLocList.get(i) == docId){
                 location = i;
+                break;
             }
             else{
                 i = i + docOccLocList.get(i+1) + 2;
@@ -680,6 +677,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         }
         if(location == -1){
             return -1;
+        } else if(location == 0) {
+            docOccLocList.get(location);
         }
         location = location +  docOccLocList.get(location+1) + 2 ;
         return docOccLocList.get(location);
@@ -791,7 +790,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
         if (dictionary.containsKey(term)) {
             int termid = dictionary.get(term);
-            if (checkIndexForTerm(termid)) {
+            if (index.containsKey(termid) || checkIndexForTerm(termid)) {
                 List<Integer> occurrence = index.get(termid);
                 int documentCount = 0;
                 int i=0;
@@ -809,15 +808,16 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     @Override
     public int corpusTermFrequency(String term) {
+        System.out.print("In corpus term freq "+term);
         if (dictionary.containsKey(term)) {
             int termid = dictionary.get(term);
-            if (checkIndexForTerm(termid)) {
+            if (index.containsKey(termid) || checkIndexForTerm(termid)) {
                 List<Integer> occurrence = index.get(termid);
                 int corpusTermFreq = 0;
                 int i=0;
                 while (i < occurrence.size()) {
-                    i=i+occurrence.get(i+1)+2;
                     corpusTermFreq = corpusTermFreq + occurrence.get(i+1);
+                    i=i+occurrence.get(i+1)+2;
                 }
                 return corpusTermFreq;
             }
@@ -828,7 +828,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     @Override
     public int documentTermFrequency(String term, String url) {
-
         int documentId = -1;
         for (int docid : _documents.keySet()) {
             if (_documents.get(docid).getUrl().equals(url)) {
@@ -839,19 +838,18 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             return 0;
         }
 
-
         if (dictionary.containsKey(term)) {
             int termid = dictionary.get(term);
-            if (checkIndexForTerm(termid)) {
+            if (index.containsKey(termid) || checkIndexForTerm(termid)) {
                 List<Integer> occurrence = index.get(termid);
                 int docTermFreq = 0;
                 int i=0;
                 while (i < occurrence.size()) {
-                    i=i+occurrence.get(i+1)+2;
-                    if (documentId == i) {
+                    if (documentId == occurrence.get(i)) {
                         docTermFreq=occurrence.get(i+1);
                         break;
                     }
+                    i=i+occurrence.get(i+1)+2;
                 }
                 return docTermFreq;
             }
@@ -864,10 +862,10 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         try {
             IndexerInvertedOccurrence ind = new IndexerInvertedOccurrence(new Options("conf/engine.conf"));
             ind.loadIndex();
-            //int termId = ind.dictionary.get("web");
-            System.out.println(ind.index.get(0));
-            //boolean result = ind.checkIndexForTerm(1911131);
-            //System.out.println(result);
+            int termId = ind.dictionary.get("web");
+            //System.out.println(ind.index.get(1711131));
+            boolean result = ind.checkIndexForTerm(termId);
+            System.out.println(result);
         } catch (Exception e){
             e.printStackTrace();
         }
