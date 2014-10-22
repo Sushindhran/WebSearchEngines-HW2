@@ -28,7 +28,6 @@ public class RankerFavorite extends Ranker {
         Queue<ScoredDocument> retrieval_results = new PriorityQueue<ScoredDocument>(numResults);
         System.out.println("Inside runQuery");
         while((doc = _indexer.nextDoc(query, docId)) != null) {
-          System.out.println("INside the while after nexdoc");
           retrieval_results.add(runqueryQL(query, doc._docid));
 
           if(numResults < retrieval_results.size()) {
@@ -58,7 +57,6 @@ public class RankerFavorite extends Ranker {
         Vector<String> qv = new Vector<String>();
         for(String str: query._tokens) {
             //Check the token for spaces and handle them accordingly
-            System.out.println(str);
             String[] temp = str.split(" ");
             if(temp.length > 1) {
                 for (String term : temp) {
@@ -69,30 +67,26 @@ public class RankerFavorite extends Ranker {
             }
         }
 
-
-
         for(String q: qv) {
-            System.out.println("IN here in the second loop in ranker fav "+ d._docid + " url "+d.getUrl());
             int docTerFreq, corpusTerFreq;
             long totWordsInDoc, totWordsInCorp;
             double cumulativeVal = 0.0;
             docTerFreq = _indexer.documentTermFrequency(q, (d.getUrl()));
-            System.out.println("Doc term freq is "+ docTerFreq);
             corpusTerFreq = _indexer.corpusTermFrequency(q);
-            System.out.println("Doc term freq is "+ corpusTerFreq);
             totWordsInDoc = d.getNumberOfWords();
-            System.out.println("Doc term freq is "+ totWordsInDoc);
             totWordsInCorp =  _indexer.totalTermFrequency();
-
+            System.out.println("\n"+docTerFreq+" "+corpusTerFreq+" "+totWordsInCorp+" "+totWordsInDoc);
             if(totWordsInDoc != 0) {
-                cumulativeVal += (1-lambda) * (docTerFreq/totWordsInDoc);
+                cumulativeVal += ((1-lambda) * (docTerFreq/totWordsInDoc));
+                System.out.println("Here");
             }
 
             if (totWordsInCorp != 0) {
-                cumulativeVal += (lambda) * (corpusTerFreq/totWordsInCorp);
+                cumulativeVal += ((lambda) * (corpusTerFreq/totWordsInCorp));
             }
+            System.out.println("Cumulative val "+cumulativeVal);
             score += (Math.log(cumulativeVal)/Math.log(2));
-            System.out.print("Score for "+q +" is "+score);
+            
         }
 
         return new ScoredDocument(d, Math.pow(2, score));
