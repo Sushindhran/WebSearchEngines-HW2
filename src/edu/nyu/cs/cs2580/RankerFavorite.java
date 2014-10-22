@@ -28,6 +28,7 @@ public class RankerFavorite extends Ranker {
         Queue<ScoredDocument> retrieval_results = new PriorityQueue<ScoredDocument>(numResults);
         System.out.println("Inside runQuery");
         while((doc = _indexer.nextDoc(query, docId)) != null) {
+
           retrieval_results.add(runqueryQL(query, doc._docid));
 
           if(numResults < retrieval_results.size()) {
@@ -52,7 +53,7 @@ public class RankerFavorite extends Ranker {
      * @return the scored document
      */
     public ScoredDocument runqueryQL(Query query, int did) {
-        float lambda = 0.5f, score = 0.0f;
+        double lambda = 0.5d, score = 0.0d;
         DocumentIndexed d = (DocumentIndexed) _indexer.getDoc(did);
         Vector<String> qv = new Vector<String>();
         for(String str: query._tokens) {
@@ -70,25 +71,21 @@ public class RankerFavorite extends Ranker {
         for(String q: qv) {
             int docTerFreq, corpusTerFreq;
             long totWordsInDoc, totWordsInCorp;
-            double cumulativeVal = 0.0;
+            double cumulativeVal = 0.0d;
             docTerFreq = _indexer.documentTermFrequency(q, (d.getUrl()));
             corpusTerFreq = _indexer.corpusTermFrequency(q);
             totWordsInDoc = d.getNumberOfWords();
             totWordsInCorp =  _indexer.totalTermFrequency();
-            System.out.println("\n"+docTerFreq+" "+corpusTerFreq+" "+totWordsInCorp+" "+totWordsInDoc);
+
             if(totWordsInDoc != 0) {
-                cumulativeVal += ((1-lambda) * (docTerFreq/totWordsInDoc));
-                System.out.println("Here");
+                cumulativeVal += ((1-lambda) * ((double)docTerFreq/totWordsInDoc));
             }
 
             if (totWordsInCorp != 0) {
-                cumulativeVal += ((lambda) * (corpusTerFreq/totWordsInCorp));
+                cumulativeVal += ((lambda) *  ((double)corpusTerFreq/totWordsInCorp));
             }
-            System.out.println("Cumulative val "+cumulativeVal);
             score += (Math.log(cumulativeVal)/Math.log(2));
-            
         }
-
         return new ScoredDocument(d, Math.pow(2, score));
     }
 }

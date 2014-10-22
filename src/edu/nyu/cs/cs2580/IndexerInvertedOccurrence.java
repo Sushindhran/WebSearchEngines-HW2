@@ -666,7 +666,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
 
         int location = -1;
-        for(int i=0; i < docOccLocList.size(); ){
+        int i;
+        for(i=0; i < docOccLocList.size(); ){
             if(docOccLocList.get(i) == docId){
                 location = i;
                 break;
@@ -679,6 +680,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             return -1;
         } else if(location == 0) {
             docOccLocList.get(location);
+        } else if(i>=docOccLocList.size()) {
+            return -1;
         }
         location = location +  docOccLocList.get(location+1) + 2 ;
         return docOccLocList.get(location);
