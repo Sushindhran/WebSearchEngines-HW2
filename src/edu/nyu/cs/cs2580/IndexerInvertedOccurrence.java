@@ -141,7 +141,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             int x=0;
             int skip=0;
 
-           while(x <= indexVal.size()+1) {
+            while(x <= indexVal.size()+1) {
                 if(x == indexVal.size()){
                     break;
                 }
@@ -152,7 +152,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                     skip+=indexVal.get(x+1) + 2;
                 }
 
-               indexWriter.write(indexVal.get(x).toString()+"\t");
+                indexWriter.write(indexVal.get(x).toString()+"\t");
                 x++;
             }
             indexWriter.write("\n");
@@ -243,122 +243,122 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     private void mergeTwoFiles(String firstFile, String secondFile) throws IOException {
 
         try{
-        StringBuilder mergebuilder = new StringBuilder(_options._indexPrefix).append("/temp.tsv");
-        BufferedWriter mergeWriter = new BufferedWriter(new FileWriter(mergebuilder.toString(), true));
+            StringBuilder mergebuilder = new StringBuilder(_options._indexPrefix).append("/temp.tsv");
+            BufferedWriter mergeWriter = new BufferedWriter(new FileWriter(mergebuilder.toString(), true));
 
-        StringBuilder firstbuilder = new StringBuilder(_options._indexPrefix).append("/"+firstFile);
-        BufferedReader firstReader = new BufferedReader(new FileReader(firstbuilder.toString()));
+            StringBuilder firstbuilder = new StringBuilder(_options._indexPrefix).append("/"+firstFile);
+            BufferedReader firstReader = new BufferedReader(new FileReader(firstbuilder.toString()));
 
-        StringBuilder secondbuilder = new StringBuilder(_options._indexPrefix).append("/"+secondFile);
-        BufferedReader secondReader = new BufferedReader(new FileReader(secondbuilder.toString()));
+            StringBuilder secondbuilder = new StringBuilder(_options._indexPrefix).append("/"+secondFile);
+            BufferedReader secondReader = new BufferedReader(new FileReader(secondbuilder.toString()));
 
-        if(firstFile ==null || firstFile ==".DS_Store" || firstFile == "DocMap.tsv" || firstFile == "Dictionary.tsv") {
-            File oldFile = new File(_options._indexPrefix + "/" + secondFile);
-            File newFile = new File(_options._indexPrefix+"/temp.tsv");
-            oldFile.renameTo(newFile);
-            mergeWriter.close();
-            firstReader.close();
-            secondReader.close();
-            return;
-        } else if(secondFile == null || secondFile ==".DS_Store" || firstFile == "DocMap.tsv" || firstFile == "Dictionary.tsv") {
-            File oldFile = new File(_options._indexPrefix + "/" + firstFile);
-            File newFile = new File(_options._indexPrefix+"/temp.tsv");
-            oldFile.renameTo(newFile);
-            mergeWriter.close();
-            firstReader.close();
-            secondReader.close();
-            return;
-        }
-
-        String firstline = firstReader.readLine(), secondline = secondReader.readLine();
-
-        int prevTermId = -1;
-        while((secondline != null) && (firstline != null)) {
-            List<String> secondlist = null, firstlist=null;
-            if(firstline != null) {
-                firstlist = stringTokenizer(firstline);
-            } else {
-                mergeWriter.write(secondline);
-                secondline=firstReader.readLine();
-                continue;
+            if(firstFile ==null || firstFile ==".DS_Store" || firstFile == "DocMap.tsv" || firstFile == "Dictionary.tsv") {
+                File oldFile = new File(_options._indexPrefix + "/" + secondFile);
+                File newFile = new File(_options._indexPrefix+"/temp.tsv");
+                oldFile.renameTo(newFile);
+                mergeWriter.close();
+                firstReader.close();
+                secondReader.close();
+                return;
+            } else if(secondFile == null || secondFile ==".DS_Store" || firstFile == "DocMap.tsv" || firstFile == "Dictionary.tsv") {
+                File oldFile = new File(_options._indexPrefix + "/" + firstFile);
+                File newFile = new File(_options._indexPrefix+"/temp.tsv");
+                oldFile.renameTo(newFile);
+                mergeWriter.close();
+                firstReader.close();
+                secondReader.close();
+                return;
             }
 
-            if(secondline != null) {
-                secondlist = stringTokenizer(secondline);
-            } else {
-                mergeWriter.write(firstline);
-                firstline=firstReader.readLine();
-                continue;
-            }
+            String firstline = firstReader.readLine(), secondline = secondReader.readLine();
 
-            if(firstlist.size() == 1 || secondlist.size() ==1 ) {
-                if(Integer.parseInt(firstlist.get(0))>Integer.parseInt(secondlist.get(0))
-                        && (Integer.parseInt(secondlist.get(0))>prevTermId)) {
-
-                    mergeWriter.write(secondlist.get(0)+"\n");
-                    secondline = secondReader.readLine();
-                    secondlist = stringTokenizer(secondline);
-                    while(secondlist.size()>1) {
-                        mergeWriter.write(secondline+"\n");
-                        secondline = secondReader.readLine();
-                        secondlist = stringTokenizer(secondline);
-                    }
-                } else if (Integer.parseInt(firstlist.get(0)) < Integer.parseInt(secondlist.get(0))) {
-                    prevTermId = Integer.parseInt(firstlist.get(0));
-                    mergeWriter.write(firstlist.get(0)+"\n");
-                    firstline = firstReader.readLine();
+            int prevTermId = -1;
+            while((secondline != null) && (firstline != null)) {
+                List<String> secondlist = null, firstlist=null;
+                if(firstline != null) {
                     firstlist = stringTokenizer(firstline);
-                    String check = firstline;
-                    while(firstlist.size()>1 && (firstline = firstReader.readLine())!=null) {
-                        mergeWriter.write(check+"\n");
-                        check = firstline;
-                        firstlist = stringTokenizer(firstline);
-                    }
-
                 } else {
-                    mergeWriter.write(firstlist.get(0)+"\n");
-                    firstline = firstReader.readLine();
-                    firstlist = stringTokenizer(firstline);
-                    while(firstlist.size()>1) {
-                        mergeWriter.write(firstline+"\n");
-                        firstline = firstReader.readLine();
-                        if(firstline==null) {
-                            break;
-                        }
-                        firstlist = stringTokenizer(firstline);
-                    }
+                    mergeWriter.write(secondline);
+                    secondline=secondReader.readLine();
+                    continue;
+                }
 
-                    secondline = secondReader.readLine();
+                if(secondline != null) {
                     secondlist = stringTokenizer(secondline);
-                    while(secondlist.size()>1) {
-                        mergeWriter.write(secondline+"\n");
+                } else {
+                    mergeWriter.write(firstline);
+                    firstline=firstReader.readLine();
+                    continue;
+                }
+
+                if(firstlist.size() == 1 || secondlist.size() ==1 ) {
+                    if(Integer.parseInt(firstlist.get(0))>Integer.parseInt(secondlist.get(0))
+                            && (Integer.parseInt(secondlist.get(0))>prevTermId)) {
+
+                        mergeWriter.write(secondlist.get(0)+"\n");
                         secondline = secondReader.readLine();
-                        if(secondline==null) {
-                            break;
-                        }
                         secondlist = stringTokenizer(secondline);
+                        while(secondlist.size()>1) {
+                            mergeWriter.write(secondline+"\n");
+                            secondline = secondReader.readLine();
+                            secondlist = stringTokenizer(secondline);
+                        }
+                    } else if (Integer.parseInt(firstlist.get(0)) < Integer.parseInt(secondlist.get(0))) {
+                        prevTermId = Integer.parseInt(firstlist.get(0));
+                        mergeWriter.write(firstlist.get(0)+"\n");
+                        firstline = firstReader.readLine();
+                        firstlist = stringTokenizer(firstline);
+                        String check = firstline;
+                        while(firstlist.size()>1 && (firstline = firstReader.readLine())!=null) {
+                            mergeWriter.write(check+"\n");
+                            check = firstline;
+                            firstlist = stringTokenizer(firstline);
+                        }
+
+                    } else {
+                        mergeWriter.write(firstlist.get(0)+"\n");
+                        firstline = firstReader.readLine();
+                        firstlist = stringTokenizer(firstline);
+                        while(firstlist.size()>1) {
+                            mergeWriter.write(firstline+"\n");
+                            firstline = firstReader.readLine();
+                            if(firstline==null) {
+                                break;
+                            }
+                            firstlist = stringTokenizer(firstline);
+                        }
+
+                        secondline = secondReader.readLine();
+                        secondlist = stringTokenizer(secondline);
+                        while(secondlist.size()>1) {
+                            mergeWriter.write(secondline+"\n");
+                            secondline = secondReader.readLine();
+                            if(secondline==null) {
+                                break;
+                            }
+                            secondlist = stringTokenizer(secondline);
+                        }
                     }
                 }
             }
-        }
 
-        if(firstline!=null) {
-            while(firstline!=null) {
-                mergeWriter.write(firstline+"\n");
-                firstline=firstReader.readLine();
+            if(firstline!=null) {
+                while(firstline!=null) {
+                    mergeWriter.write(firstline+"\n");
+                    firstline=firstReader.readLine();
+                }
             }
-        }
 
-        if(secondline!=null) {
-            while(secondline!=null) {
-                mergeWriter.write(secondline+"\n");
-                secondline=secondReader.readLine();
+            if(secondline!=null) {
+                while(secondline!=null) {
+                    mergeWriter.write(secondline+"\n");
+                    secondline=secondReader.readLine();
+                }
             }
-        }
 
-        mergeWriter.close();
-        firstReader.close();
-        secondReader.close();
+            mergeWriter.close();
+            firstReader.close();
+            secondReader.close();
         }catch(IOException e)
         {
             e.printStackTrace();
@@ -456,7 +456,9 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                 }
 
             }
+            int c=0;
             while (line != null) {
+                if(c==184) break;
                 if(line.equals("##########") && !loadCache) {
                     hashcount++;
                     if(hashcount==1) {
@@ -476,11 +478,13 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                                 _documents.put(docid, documentIndexed);
                             }
                         }
+                        System.out.println("Loaded "+_documents.size()+" documents.");
                     } else if(hashcount==2) {
                         loadDictionary(br);
                     }
                 } else if(!indexDone) {
-                   // System.out.println("Here");
+                    System.out.println(line);
+                    // System.out.println("Here");
                     if(line.equals("##########")) {
                         System.out.println("Index size at the end is "+index.size());
                         //globalIndexCount = 0;
@@ -494,13 +498,19 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                         if(cacheCount!=0) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
                             index.put(new Integer(key), value);
+                            //if(key==1711131) {
+                            System.out.println("For web in load index "+key +" "+value);
+                            //}
+                            value = new ArrayList<Integer>();
+
                         }
 
-                        if(cacheCount==500) {
+                        if(cacheCount==5000000) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
                             index.put(new Integer(key), value);
+                            value = new ArrayList<Integer>();
                             //System.out.println("Current index size is " + index.size());
-                            if(globalIndexCount<500) {
+                            if(globalIndexCount<5000000) {
                                 loadCache = false;
                             }
                             globalIndexCount--;
@@ -512,12 +522,17 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                         cacheCount++;
                         globalIndexCount++;
                     } else {
+
                         for(String s: stringList) {
+                            if(key==1711131) {
+                                System.out.println("For web in load index "+stringList.size() +" "+s);
+                            }
                             value.add(Integer.parseInt(s));
                         }
                     }
                 }
                 line = br.readLine();
+                c++;
             }
             br.close();
             in.close();
@@ -541,7 +556,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         while (dictionaryString != null) {
             List<String> dictList = stringTokenizer(dictionaryString);
             if(dictList.size()==2) {
-                System.out.println(count++);
                 dictionary.put(dictList.get(0), Integer.parseInt(dictList.get(1)));
             }
             dictionaryString = br.readLine();
@@ -594,9 +608,11 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     @Override
     public Document nextDoc(Query query, int docid) {
         if(query instanceof QueryPhrase){
+            System.out.println("Next doc Phrase");
             return nextDocForPhrase(query, docid);
         }
         else{
+            System.out.println("Next doc Simple");
             return nextDocForSimple(query, docid);
         }
     }
@@ -605,6 +621,10 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         int maxDocId = 0;
         int start = 1, end = 1;
         for(String q: query._tokens){
+            System.out.println("Next doc Simple: For loop: Query is "+ q);
+            if(docid == -1) {
+
+            }
             int nextDocId = next(q,docid);
             if( nextDocId < 0){
                 return null;
@@ -627,6 +647,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     }
 
     public int next(String word, int docId){
+        System.out.println("Inside Next "+word+" "+docId);
         if( (word == null) || (word.trim().length() == 0) ){
             return -1;
         }
@@ -636,13 +657,26 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         }
         // valueList is the list of docIDS for the word.
         List<Integer> docOccLocList = getTerm(termId);
+        if(!docOccLocList.isEmpty()) {
+            System.out.println("Found term "+ docOccLocList.size());
+        }
+
+        System.out.println("Found term "+ docOccLocList.get(0));
+        System.out.println("Found term "+ docOccLocList.get(1));
+        System.out.println("Found term "+ docOccLocList.get(2));
+        if(docId == -1) {
+            docId = docOccLocList.get(0);
+        }
+
+
         int location = -1;
-        for(int i=0;i < docOccLocList.size(); ){
+        for(int i=0; i < docOccLocList.size(); ){
+            //System.out.print(i+" "+docOccLocList.get(i));
             if(docOccLocList.get(i) == docId){
                 location = i;
             }
             else{
-                i = i+ docOccLocList.get(i+1) + 2;
+                i = i + docOccLocList.get(i+1) + 2;
             }
         }
         if(location == -1){
@@ -750,8 +784,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                 return nextDocForPhrase(query, maxDocId - 1);
             }
         }
-            return phraseDoc;
-        }
+        return phraseDoc;
+    }
 
     @Override
     public int corpusDocFrequencyByTerm(String term) {
@@ -831,8 +865,10 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         try {
             IndexerInvertedOccurrence ind = new IndexerInvertedOccurrence(new Options("conf/engine.conf"));
             ind.loadIndex();
-            boolean result = ind.checkIndexForTerm(1911131);
-            System.out.println(result);
+            //int termId = ind.dictionary.get("web");
+            System.out.println(ind.index.get(0));
+            //boolean result = ind.checkIndexForTerm(1911131);
+            //System.out.println(result);
         } catch (Exception e){
             e.printStackTrace();
         }

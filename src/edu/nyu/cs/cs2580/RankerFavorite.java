@@ -26,8 +26,11 @@ public class RankerFavorite extends Ranker {
         int docId = -1;
         Vector<ScoredDocument> results = new Vector<ScoredDocument>();
         Queue<ScoredDocument> retrieval_results = new PriorityQueue<ScoredDocument>(numResults);
+        System.out.println("Inside runQuery");
         while((doc = _indexer.nextDoc(query, docId)) != null) {
+          System.out.println("INside the while after nexdoc");
           retrieval_results.add(runqueryQL(query, doc._docid));
+
           if(numResults < retrieval_results.size()) {
               retrieval_results.poll();
           }
@@ -35,9 +38,11 @@ public class RankerFavorite extends Ranker {
         }
 
         while ((scoredDoc = retrieval_results.poll()) != null) {
+
           results.add(scoredDoc);
         }
         Collections.sort(results, Collections.reverseOrder());
+        System.out.println("Results "+results);
         return results;
     }
 
@@ -51,8 +56,10 @@ public class RankerFavorite extends Ranker {
         float lambda = 0.5f, score = 0.0f;
         DocumentIndexed d = (DocumentIndexed) _indexer.getDoc(did);
         Vector<String> qv = new Vector<String>();
+        System.out.println("Query size is "+query._tokens.size());
         for(String str: query._tokens) {
             //Check the token for spaces and handle them accordingly
+            System.out.println(str);
             String[] temp = str.split(" ");
             if(temp.length > 1) {
                 for (String term : temp) {
@@ -62,6 +69,8 @@ public class RankerFavorite extends Ranker {
                 qv.add(str);
             }
         }
+
+
 
         for(String q: qv) {
             int docTerFreq, corpusTerFreq;
@@ -80,6 +89,7 @@ public class RankerFavorite extends Ranker {
                 cumulativeVal += (lambda) * (corpusTerFreq/totWordsInCorp);
             }
             score += (Math.log(cumulativeVal)/Math.log(2));
+            System.out.print("Score for "+q +" is "+score);
         }
 
         return new ScoredDocument(d, Math.pow(2, score));

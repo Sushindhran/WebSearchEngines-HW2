@@ -105,8 +105,8 @@ class QueryHandler implements HttpHandler {
     responseBody.close();
   }
 
-  private void constructTextOutput(
-      final Vector<ScoredDocument> docs, StringBuffer response) {
+  private void constructTextOutput(final Vector<ScoredDocument> docs, StringBuffer response) {
+      System.out.println("Response is "+ response);
     for (ScoredDocument doc : docs) {
       response.append(response.length() > 0 ? "\n" : "");
       response.append(doc.asTextResult());
