@@ -26,6 +26,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     int uniqueTermNum = 0;
     private int globalIndexCount = 0;
     private boolean loadCache = false;
+    private boolean termFreqLoaded = false;
 
     public IndexerInvertedOccurrence(Options options) {
         super(options);
@@ -40,10 +41,11 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         _numDocs = listOfFiles.length;
         //Ensuring that the map is clear
         index.clear();
-
+        System.out.print(listOfFiles.length);
         for (File file : listOfFiles) {
+
             if(fileCount==500) {
-                System.out.println("Constructing Partial Index " + (int) Math.ceil(indexCount / 500));
+                System.out.println("Constructing Partial Index" + (int) Math.ceil(indexCount / 500));
                 persist((int) Math.ceil(indexCount / 500));
                 index.clear();
                 fileCount = 0;
@@ -56,7 +58,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             indexCount++;
             fileCount++;
         }
-
         persist((int)Math.floor(indexCount/500)+1);
         System.out.println("Constructing Partial Index " + (int)(Math.floor(indexCount/500)+1.0));
         index.clear();
@@ -106,59 +107,61 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     private void persist(int fileCount) throws IOException {
         partialFileCount++;
-
-        //Sort the index before making a partial index
-        StringBuilder indexBuilder = new StringBuilder(_options._indexPrefix).append("/").append(fileCount+"tempIndex.tsv");
-        BufferedWriter indexWriter = new BufferedWriter(new FileWriter(indexBuilder.toString(), true));
+        try {
+            //Sort the index before making a partial index
+            StringBuilder indexBuilder = new StringBuilder(_options._indexPrefix).append("/").append(fileCount + "tempIndex.tsv");
+            BufferedWriter indexWriter = new BufferedWriter(new FileWriter(indexBuilder.toString(), true));
 
         /* The Index is saved as follows in tsv format
          * Col1 : TermId
          * Col2 : List of Documents and corresponding values-separated by a space.
          */
 
-        Set<Integer> indexKeys = index.keySet();
+            Set<Integer> indexKeys = index.keySet();
 
-        //Convert to list to sort
-        List<Integer> indexKeysList = new ArrayList<Integer>();
-        indexKeysList.addAll(indexKeys);
-        Collections.sort(indexKeysList);
+            //Convert to list to sort
+            List<Integer> indexKeysList = new ArrayList<Integer>();
+            indexKeysList.addAll(indexKeys);
+            Collections.sort(indexKeysList);
 
-        //Iterate over the sorted keyList
-        Iterator<Integer> indexIt = indexKeysList.iterator();
+            //Iterate over the sorted keyList
+            Iterator<Integer> indexIt = indexKeysList.iterator();
 
-        while(indexIt.hasNext()) {
+            while (indexIt.hasNext()) {
 
-            Integer key = indexIt.next();
 
-            indexWriter.write(key.toString());
+                Integer key = indexIt.next();
+                indexWriter.write(key.toString());
 
-            //Value for key
-            ArrayList<Integer> indexVal = index.get(key);
+                //Value for key
+                ArrayList<Integer> indexVal = index.get(key);
 
-            //Iterate over the document details
-            // 1) First Value is the number of occurences
-            // 2) Subsequent Values are the locations of each occurence in the document.
-            int x=0;
-            int skip=0;
+                //Iterate over the document details
+                // 1) First Value is the number of occurences
+                // 2) Subsequent Values are the locations of each occurence in the document.
+                int x = 0;
+                int skip = 0;
 
-            while(x <= indexVal.size()+1) {
-                if(x == indexVal.size()){
-                    break;
+                while (x <= indexVal.size() + 1) {
+                    if (x == indexVal.size()) {
+                        break;
+                    }
+
+                    if (x == skip) {
+                        indexWriter.write("\n");
+                        //This is a docId
+                        skip += indexVal.get(x + 1) + 2;
+                    }
+
+                    indexWriter.write(indexVal.get(x).toString() + "\t");
+                    x++;
                 }
-
-                if(x==skip) {
-                    indexWriter.write("\n");
-                    //This is a docId
-                    skip+=indexVal.get(x+1) + 2;
-                }
-
-                indexWriter.write(indexVal.get(x).toString()+"\t");
-                x++;
+                indexWriter.write("\n");
             }
-            indexWriter.write("\n");
+            indexWriter.close();
+        }catch (Exception e) {
+            e.printStackTrace();
         }
-        indexWriter.close();
-
         //Clear index
         index.clear();
     }
@@ -173,14 +176,14 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
         //Delimiter for next data structure in the index - 10 '#' symbols
         mergeWriter.write("##########\n");
-
+        mergeWriter.write(Long.toString(_totalTermFrequency)+"\n");
         //Document map
 
         for(int document : _documents.keySet()) {
             DocumentIndexed docIndexed = _documents.get(document);
             mergeWriter.write((document + "\t"));
             mergeWriter.write(docIndexed.getTitle() + "\t" + docIndexed.getUrl() + "\t");
-            mergeWriter.write(docIndexed.getNumberOfWords() +"");
+            mergeWriter.write(docIndexed.getNumberOfWords()+"");
             mergeWriter.newLine();
         }
         //Clear all documents from the map after writing.
@@ -200,7 +203,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         mergeWriter.close();
         //Clear the dictionary
         dictionary.clear();
-
 
         mergeWriter.close();
 
@@ -462,6 +464,12 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                 if(line.equals("##########") && !loadCache) {
                     hashcount++;
                     if(hashcount==1) {
+                        if(!termFreqLoaded) {
+                            line = br.readLine();
+                            _totalTermFrequency= Long.parseLong(line);
+                            termFreqLoaded = true;
+                            System.out.println("Total term frequency "+_totalTermFrequency);
+                        }
                         System.out.println("Loading Document map");
                         while(line!=null) {
                             line=br.readLine();
@@ -563,7 +571,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     }
 
     public boolean checkIndexForTerm(int termId) {
-        System.out.println("In check index for term");
         while(globalIndexCount!=0) {
 
             if (index.containsKey(termId)) {
@@ -607,11 +614,9 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     @Override
     public Document nextDoc(Query query, int docid) {
         if(query instanceof QueryPhrase){
-            System.out.println("Next doc Phrase");
             return nextDocForPhrase(query, docid);
         }
         else{
-            System.out.println("Next doc Simple");
             return nextDocForSimple(query, docid);
         }
     }
@@ -620,7 +625,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         int maxDocId = 0;
         int start = 1, end = 1;
         for(String q: query._tokens){
-            System.out.println("Next doc Simple: For loop: Query is "+ q);
             if(docid == -1) {
 
             }
@@ -646,7 +650,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
     }
 
     public int next(String word, int docId){
-        System.out.println("Inside Next "+word+" "+docId);
         if( (word == null) || (word.trim().length() == 0) ){
             return -1;
         }
@@ -656,9 +659,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         }
         // valueList is the list of docIDS for the word.
         List<Integer> docOccLocList = getTerm(termId);
-        if(!docOccLocList.isEmpty()) {
-            System.out.println("Found term "+ docOccLocList.size());
-        }
 
         if(docId == -1) {
             docId = docOccLocList.get(0);
@@ -808,7 +808,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     @Override
     public int corpusTermFrequency(String term) {
-        System.out.print("In corpus term freq "+term);
         if (dictionary.containsKey(term)) {
             int termid = dictionary.get(term);
             if (index.containsKey(termid) || checkIndexForTerm(termid)) {
@@ -843,13 +842,13 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             if (index.containsKey(termid) || checkIndexForTerm(termid)) {
                 List<Integer> occurrence = index.get(termid);
                 int docTermFreq = 0;
-                int i=0;
+                int i = 0;
                 while (i < occurrence.size()) {
                     if (documentId == occurrence.get(i)) {
-                        docTermFreq=occurrence.get(i+1);
+                        docTermFreq = occurrence.get(i + 1);
                         break;
                     }
-                    i=i+occurrence.get(i+1)+2;
+                    i = i + occurrence.get(i + 1) + 2;
                 }
                 return docTermFreq;
             }
