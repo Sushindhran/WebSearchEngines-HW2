@@ -456,9 +456,9 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                 }
 
             }
-            int c=0;
+            //int c=0;
             while (line != null) {
-                if(c==184) break;
+                //if(c==184) break;
                 if(line.equals("##########") && !loadCache) {
                     hashcount++;
                     if(hashcount==1) {
@@ -483,7 +483,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                         loadDictionary(br);
                     }
                 } else if(!indexDone) {
-                    System.out.println(line);
                     // System.out.println("Here");
                     if(line.equals("##########")) {
                         System.out.println("Index size at the end is "+index.size());
@@ -532,7 +531,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                     }
                 }
                 line = br.readLine();
-                c++;
+                //c++;
             }
             br.close();
             in.close();
