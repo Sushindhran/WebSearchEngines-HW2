@@ -626,9 +626,16 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         int start = 1, end = 1;
         for(String q: query._tokens){
             if(docid == -1) {
-
             }
             int nextDocId = next(q,docid);
+
+            int termId = dictionary.get(q);
+
+            List<Integer> docOccLocList = getTerm(termId);
+
+            if(nextDocId > docOccLocList.get(docOccLocList.size()-2)){
+                return null;
+            }
             if( nextDocId < 0){
                 return null;
             }
