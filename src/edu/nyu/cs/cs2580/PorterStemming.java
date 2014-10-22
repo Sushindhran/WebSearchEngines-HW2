@@ -547,7 +547,7 @@ class PorterStemming {
         k = i - 1;
         if (k > 1) {
             step1();
-//      step2();
+            step2();
 //      step3();
 //      step4();
 //      step5();

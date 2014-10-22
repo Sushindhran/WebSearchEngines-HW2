@@ -25,9 +25,11 @@ public class Query {
     if (_query == null) {
       return;
     }
+    PorterStemming ps = new PorterStemming();
     Scanner s = new Scanner(_query);
     while (s.hasNext()) {
-      _tokens.add(s.next());
+
+      _tokens.add(ps.getStemmedWord(s.next().toString()));
     }
     s.close();
   }
