@@ -3,6 +3,7 @@ package edu.nyu.cs.cs2580;
 import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -47,9 +48,11 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                 index.clear();
                 fileCount = 0;
             }
-
-            analyse(file, indexCount);
-
+            try {
+                analyse(file, indexCount);
+            }catch (Exception e) {
+                e.printStackTrace();
+            }
             indexCount++;
             fileCount++;
         }
@@ -103,34 +106,6 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     private void persist(int fileCount) throws IOException {
         partialFileCount++;
-        //Document map
-        StringBuilder builder = new StringBuilder(_options._indexPrefix).append("/").append("DocMap.tsv");
-        BufferedWriter writer = new BufferedWriter(new FileWriter(builder.toString(), true));
-
-        for(int document : _documents.keySet()) {
-            DocumentIndexed docIndexed = _documents.get(document);
-            writer.write((document + "\t"));
-            writer.write(docIndexed.getTitle() + "\t" + docIndexed.getUrl() + "\t");
-            writer.write(docIndexed.getNumberOfWords() +"");
-            writer.newLine();
-        }
-        writer.close();
-        //Clear all documents from the map after writing.
-        _documents.clear();
-
-        //Dictionary
-        StringBuilder dictBuilder = new StringBuilder(_options._indexPrefix).append("/").append("Dictionary.tsv");
-        BufferedWriter dictWriter = new BufferedWriter(new FileWriter(dictBuilder.toString(), true));
-
-        Set<Entry<String, Integer>> dictEntrySet = dictionary.entrySet();
-        for(Entry<String, Integer> dictEntry : dictEntrySet) {
-            dictWriter.write(dictEntry.getKey()+"\t");
-            dictWriter.write(dictEntry.getValue()+"\n");
-        }
-        dictWriter.newLine();
-        dictWriter.close();
-        //Clear the dictionary
-        dictionary.clear();
 
         //Sort the index before making a partial index
         StringBuilder indexBuilder = new StringBuilder(_options._indexPrefix).append("/").append(fileCount+"tempIndex.tsv");
@@ -199,31 +174,33 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         //Delimiter for next data structure in the index - 10 '#' symbols
         mergeWriter.write("##########\n");
 
-        //Read from DocMap.tsv
-        StringBuilder docbuilder = new StringBuilder(_options._indexPrefix).append("/").append("DocMap.tsv");
-        BufferedReader docMapReader = new BufferedReader(new FileReader(docbuilder.toString()));
+        //Document map
 
-        String line = null;
-
-        while((line=docMapReader.readLine()) != null) {
-            mergeWriter.write(line+"\n");
+        for(int document : _documents.keySet()) {
+            DocumentIndexed docIndexed = _documents.get(document);
+            mergeWriter.write((document + "\t"));
+            mergeWriter.write(docIndexed.getTitle() + "\t" + docIndexed.getUrl() + "\t");
+            mergeWriter.write(docIndexed.getNumberOfWords() +"");
+            mergeWriter.newLine();
         }
-
-        docMapReader.close();
+        //Clear all documents from the map after writing.
+        _documents.clear();
 
         //Delimiter for next data structure in the index - 10 '#' symbols
         mergeWriter.write("##########\n");
         mergeWriter.write("##########\n");
 
-        //Read from Dictionary.tsv
-        StringBuilder dictbuilder = new StringBuilder(_options._indexPrefix).append("/").append("Dictionary.tsv");
-        BufferedReader dictReader = new BufferedReader(new FileReader(dictbuilder.toString()));
-
-        while((line=dictReader.readLine()) != null) {
-            mergeWriter.write(line+"\n");
+        //Dictionary
+        Set<Entry<String, Integer>> dictEntrySet = dictionary.entrySet();
+        for(Entry<String, Integer> dictEntry : dictEntrySet) {
+            mergeWriter.write(dictEntry.getKey()+"\t");
+            mergeWriter.write(dictEntry.getValue()+"\n");
         }
+        mergeWriter.newLine();
+        mergeWriter.close();
+        //Clear the dictionary
+        dictionary.clear();
 
-        dictReader.close();
 
         mergeWriter.close();
 
@@ -345,6 +322,9 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                     while(firstlist.size()>1) {
                         mergeWriter.write(firstline+"\n");
                         firstline = firstReader.readLine();
+                        if(firstline==null) {
+                            break;
+                        }
                         firstlist = stringTokenizer(firstline);
                     }
 
@@ -353,6 +333,9 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                     while(secondlist.size()>1) {
                         mergeWriter.write(secondline+"\n");
                         secondline = secondReader.readLine();
+                        if(secondline==null) {
+                            break;
+                        }
                         secondlist = stringTokenizer(secondline);
                     }
                 }
@@ -384,9 +367,13 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
 
     private List<String> stringTokenizer(String str) {
         List<String> tokenList = new ArrayList<String>();
-        StringTokenizer st = new StringTokenizer(str, "\t");
-        while (st.hasMoreElements()) {
-            tokenList.add(st.nextElement().toString());
+        try {
+            StringTokenizer st = new StringTokenizer(str, "\t");
+            while (st.hasMoreElements()) {
+                tokenList.add(st.nextElement().toString());
+            }
+        }catch (Exception e) {
+            //IT is null
         }
         return tokenList;
     }
@@ -399,6 +386,7 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
             Vector<String> stopWords = new StopWords().getStopWords();
             String term = PorterStemming.getStemmedWord(lower);
             if(!stopWords.contains(term) && term != " " && term.length()>1) {
+                //System.out.print("In updateIndex: Dictionary size "+dictionary.size());
                 if (!dictionary.containsKey(term)) {
                     dictionary.put(term, uniqueTermNum);
 
@@ -411,20 +399,29 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                     trackerList.add(0);
                     uniqueTermNum++;
                 } else {
+                    //System.out.print("In updateIndex: Dictionary size "+dictionary.size());
                     int termId = dictionary.get(term);
-                    ArrayList<Integer> occurrence = index.get(termId);
-
                     int latestPosition = trackerList.get(termId);
 
-                    if (occurrence.get(latestPosition) == indexCount) {
-                        occurrence.set(latestPosition + 1, occurrence.get(latestPosition + 1) + 1);
-                        occurrence.add(i);
-                    } else {
+                    if(!index.containsKey(termId)) {
+                        ArrayList<Integer> occurrence = new ArrayList<Integer>();
                         occurrence.add(indexCount);
-                        latestPosition = occurrence.size() - 1;
-                        trackerList.set(termId, latestPosition);
                         occurrence.add(1);
                         occurrence.add(i);
+                        index.put(termId, occurrence);
+                        trackerList.set(termId, 0);
+                    } else {
+                        ArrayList<Integer> occurrence = index.get(termId);
+                        if (occurrence.get(latestPosition) == indexCount) {
+                            occurrence.set(latestPosition + 1, occurrence.get(latestPosition + 1) + 1);
+                            occurrence.add(i);
+                        } else {
+                            occurrence.add(indexCount);
+                            latestPosition = occurrence.size() - 1;
+                            trackerList.set(termId, latestPosition);
+                            occurrence.add(1);
+                            occurrence.add(i);
+                        }
                     }
                 }
                 _totalTermFrequency++;
@@ -487,26 +484,31 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
                     }
                 } else if(!indexDone) {
                    // System.out.println("Here");
-
+                    if(line.equals("##########")) {
+                        System.out.println("Index size at the end is "+index.size());
+                        //globalIndexCount = 0;
+                        indexDone=true;
+                        //loadCache = false;
+                        break;
+                    }
                     //Always in else to load the index first
                     List<String> stringList = stringTokenizer(line);
                     if(stringList.size() == 1) {
                         if(cacheCount!=0) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
-                            //index.put(new Integer(key), value);
+                            index.put(new Integer(key), value);
                         }
 
-                        //if(cacheCount==10000) {
+                        if(cacheCount==80000) {
                             //System.out.println("Key is " + key + " value is "+value.get(0));
-                            //index.put(new Integer(key), value);
+                            index.put(new Integer(key), value);
                             //System.out.println("Current index size is " + index.size());
-                            if(globalIndexCount<10000){
+                            if(globalIndexCount<80000) {
                                 loadCache = false;
                             }
-
-                            //globalIndexCount--;
-                            //indexDone = true;
-                       // }
+                            globalIndexCount--;
+                            indexDone = true;
+                        }
 
                         key = Integer.parseInt(stringList.get(0));
 
@@ -552,7 +554,9 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         while(globalIndexCount!=0) {
 
             if (index.containsKey(termId)) {
-
+                if(globalIndexCount>dictionary.size()){
+                    globalIndexCount = 0;
+                }
                 return true;
             } else {
                 if(globalIndexCount>termId){
@@ -829,10 +833,8 @@ public class IndexerInvertedOccurrence extends Indexer implements Serializable{
         try {
             IndexerInvertedOccurrence ind = new IndexerInvertedOccurrence(new Options("conf/engine.conf"));
             ind.loadIndex();
-            //int term = ind.dictionary.get("web");
-            //System.out.println("Term is "+term + " "+ind.globalIndexCount);
-            //boolean result = ind.checkIndexForTerm(term);
-            //System.out.println(result);
+            boolean result = ind.checkIndexForTerm(1711131);
+            System.out.println(result);
         } catch (Exception e){
             e.printStackTrace();
         }
