@@ -60,7 +60,7 @@ public abstract class Indexer {
    * @return the next Document after {@code docid} satisfying {@code query} or
    * null if no such document exists.
    */
-  public abstract Document nextDoc(Query query, int docid);
+  public abstract Document nextDoc(Query query, int docid) throws IOException, ClassNotFoundException;
 
   // APIs for index construction and loading.
 

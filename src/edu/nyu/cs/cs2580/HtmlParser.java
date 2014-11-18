@@ -5,6 +5,7 @@ import org.jsoup.nodes.Document;
 
 import java.io.*;
 import java.util.Iterator;
+import java.util.Vector;
 
 /**
  * Created by abhisheksanghvi on 10/17/14.
@@ -18,9 +19,33 @@ public class HtmlParser {
         try {
             Document html = Jsoup.parse(file, "UTF-8");
 
-            strippedOutput.append(html.title() + "\t");
+            String body = html.body().text();
+            body = body.replaceAll("\"", " ").trim();
+            body=body.replaceAll(",", "").trim();
+            body=body.replaceAll("\t", " ").trim();
+            body=body.replaceAll("'", "").trim();
+            body=body.replaceAll(":", "").trim();
+            body=body.replaceAll(";", "").trim();
+            body=body.replaceAll("\\)", "").trim();
+            body=body.replaceAll("\\(", "").trim();
+            body=body.replaceAll("\t", "").trim();
+            body=body.replaceAll("\\.", "").trim();
 
-            strippedOutput.append(html.body().text());
+            String title = html.title();
+            title=title.replaceAll(",", "").trim();
+            title=title.replaceAll("\t", " ").trim();
+            title=title.replaceAll("'", "").trim();
+            title=title.replaceAll(":", "").trim();
+            title=title.replaceAll(";", "").trim();
+            title=title.replaceAll("\\)", "").trim();
+            title=title.replaceAll("\\(", "").trim();
+            title=title.replaceAll("\t", "").trim();
+            title=title.replaceAll("\\.", "").trim();
+
+
+            strippedOutput.append(title + "\t");
+
+            strippedOutput.append(body);
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -29,13 +54,5 @@ public class HtmlParser {
         }
 
         return strippedOutput.toString();
-    }
-
-    public static void main(String args[]) {
-        //File f =  new File("./data/simple/test.html");
-        //File f =  new File("./data/wiki/1975–76_UEFA_Cup");
-        File f =  new File("./data/wiki/1983–84_Liverpool_F.C._season.html");
-        parseFile(f);
-        //System.out.println(parseFile(f));
     }
 }

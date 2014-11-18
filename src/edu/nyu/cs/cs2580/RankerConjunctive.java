@@ -1,5 +1,6 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -26,15 +27,21 @@ public class RankerConjunctive extends Ranker {
     Queue<ScoredDocument> rankQueue = new PriorityQueue<ScoredDocument>();
     Document doc = null;
     int docid = -1;
-    while ((doc = _indexer.nextDoc(query, docid)) != null) {
-      rankQueue.add(new ScoredDocument(doc, 1.0));
-      if (rankQueue.size() > numResults) {
-        rankQueue.poll();
+      try {
+          while ((doc = _indexer.nextDoc(query, docid)) != null) {
+            rankQueue.add(new ScoredDocument(doc, 1.0));
+            if (rankQueue.size() > numResults) {
+              rankQueue.poll();
+            }
+            docid = doc._docid;
+          }
+      } catch (IOException e) {
+          e.printStackTrace();
+      } catch (ClassNotFoundException e) {
+          e.printStackTrace();
       }
-      docid = doc._docid;
-    }
 
-    Vector<ScoredDocument> results = new Vector<ScoredDocument>();
+      Vector<ScoredDocument> results = new Vector<ScoredDocument>();
     ScoredDocument scoredDoc = null;
     while ((scoredDoc = rankQueue.poll()) != null) {
       results.add(scoredDoc);

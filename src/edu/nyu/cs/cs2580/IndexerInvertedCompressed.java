@@ -923,6 +923,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
         }
         return phraseDoc;
     }
+
     @Override
     public int corpusDocFrequencyByTerm(String term) {
         if (dictionary.containsKey(term)) {
@@ -941,6 +942,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
         }
         return 0;
     }
+
     @Override
     public int corpusTermFrequency(String term) {
         System.out.print("In corpus term freq "+term);
@@ -960,6 +962,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
         }
         return 0;
     }
+
     @Override
     public int documentTermFrequency(String term, String url) {
         int documentId = -1;

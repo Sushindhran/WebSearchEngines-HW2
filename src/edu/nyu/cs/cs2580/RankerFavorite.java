@@ -1,5 +1,6 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.IOException;
 import java.util.*;
 
 import edu.nyu.cs.cs2580.QueryHandler.CgiArguments;
@@ -27,14 +28,20 @@ public class RankerFavorite extends Ranker {
         Vector<ScoredDocument> results = new Vector<ScoredDocument>();
         Queue<ScoredDocument> retrieval_results = new PriorityQueue<ScoredDocument>(numResults);
         System.out.println("Inside runQuery");
-        while((doc = _indexer.nextDoc(query, docId)) != null) {
+        try {
+            while((doc = _indexer.nextDoc(query, docId)) != null) {
 
-          retrieval_results.add(runqueryQL(query, doc._docid));
+              retrieval_results.add(runqueryQL(query, doc._docid));
 
-          if(numResults < retrieval_results.size()) {
-              retrieval_results.poll();
-          }
-          docId = doc._docid;
+              if(numResults < retrieval_results.size()) {
+                  retrieval_results.poll();
+              }
+              docId = doc._docid;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
 
         while ((scoredDoc = retrieval_results.poll()) != null) {

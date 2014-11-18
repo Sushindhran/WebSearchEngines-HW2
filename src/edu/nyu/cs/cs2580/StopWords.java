@@ -1,9 +1,4 @@
 package edu.nyu.cs.cs2580;
-
-import javafx.scene.paint.Stop;
-
-import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Vector;
 
 /**
@@ -44,6 +39,7 @@ public class StopWords {
         stopWords.add("in");
         stopWords.add("shall");
         stopWords.add("you");
+        stopWords.add("[edit]");
         return stopWords;
     }
 }
