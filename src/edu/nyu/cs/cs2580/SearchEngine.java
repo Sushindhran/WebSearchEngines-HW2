@@ -58,7 +58,7 @@ public class SearchEngine {
     
     /**
      * Constructor for options.
-     * @param optionFile where all the options must reside
+     * @param optionsFile where all the options must reside
      * @throws IOException
      */
     public Options(String optionsFile) throws IOException {
