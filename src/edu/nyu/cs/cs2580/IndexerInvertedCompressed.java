@@ -116,7 +116,7 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
         partialFileCount++;
         try {
             //Sort the index before making a partial index
-            StringBuilder indexBuilder = new StringBuilder(_options._indexPrefix).append("/").append(fileCount + "tempIndex.tsv");
+            StringBuilder indexBuilder = new StringBuilder(_options._indexPrefix).append(File.separator).append(fileCount + "tempIndex.tsv");
             BufferedWriter indexWriter = new BufferedWriter(new FileWriter(indexBuilder.toString(), true));
 
         /* The Index is saved as follows in tsv format
@@ -135,8 +135,6 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
             Iterator<Integer> indexIt = indexKeysList.iterator();
 
             while (indexIt.hasNext()) {
-
-
                 Integer key = indexIt.next();
                 indexWriter.write(key.toString());
 
@@ -174,7 +172,7 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
     }
 
     private void writeDocumentsandDictionary() throws IOException {
-        String docFile = "/documentsAndDict.tsv";
+        String docFile = File.separator+"documentsAndDict.tsv";
         StringBuilder mergebuilder = new StringBuilder(_options._indexPrefix).append(docFile);
         BufferedWriter mergeWriter = new BufferedWriter(new FileWriter(mergebuilder.toString(), true));
 
@@ -221,12 +219,12 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
     }
 
     private void mergeIndexFiles() throws IOException {
-        String indexFile = "/invertedIndexOccurrence.tsv";
-        mergeTwoFiles("/1tempIndex.tsv", "/2tempIndex.tsv");
+        String indexFile = File.separator+"invertedIndexOccurrence.tsv";
+        mergeTwoFiles(File.separator+"1tempIndex.tsv", File.separator+"2tempIndex.tsv");
 
         for(int i=3; i<=partialFileCount; i++) {
-            File oldFile = new File(_options._indexPrefix+"/temp.tsv");
-            File newFile = new File(_options._indexPrefix+"/first.tsv");
+            File oldFile = new File(_options._indexPrefix+File.separator+"temp.tsv");
+            File newFile = new File(_options._indexPrefix+File.separator+"first.tsv");
             oldFile.renameTo(newFile);
             try {
                 mergeTwoFiles("first.tsv", i + "tempIndex.tsv");
@@ -234,7 +232,7 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
                 e.printStackTrace();
             }
         }
-        File oldFile = new File(_options._indexPrefix+"/temp.tsv");
+        File oldFile = new File(_options._indexPrefix+File.separator+"temp.tsv");
         File newFile = new File(_options._indexPrefix+indexFile);
         oldFile.renameTo(newFile);
 
@@ -244,26 +242,26 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
     private void mergeTwoFiles(String firstFile, String secondFile) throws IOException {
 
         try{
-            StringBuilder mergebuilder = new StringBuilder(_options._indexPrefix).append("/temp.tsv");
+            StringBuilder mergebuilder = new StringBuilder(_options._indexPrefix).append(File.separator+"temp.tsv");
             BufferedWriter mergeWriter = new BufferedWriter(new FileWriter(mergebuilder.toString(), true));
 
-            StringBuilder firstbuilder = new StringBuilder(_options._indexPrefix).append("/"+firstFile);
+            StringBuilder firstbuilder = new StringBuilder(_options._indexPrefix).append(File.separator+firstFile);
             BufferedReader firstReader = new BufferedReader(new FileReader(firstbuilder.toString()));
 
-            StringBuilder secondbuilder = new StringBuilder(_options._indexPrefix).append("/"+secondFile);
+            StringBuilder secondbuilder = new StringBuilder(_options._indexPrefix).append(File.separator+secondFile);
             BufferedReader secondReader = new BufferedReader(new FileReader(secondbuilder.toString()));
 
             if(firstFile ==null || firstFile ==".DS_Store" || firstFile == "DocMap.tsv" || firstFile == "Dictionary.tsv") {
-                File oldFile = new File(_options._indexPrefix + "/" + secondFile);
-                File newFile = new File(_options._indexPrefix+"/temp.tsv");
+                File oldFile = new File(_options._indexPrefix + File.separator + secondFile);
+                File newFile = new File(_options._indexPrefix+File.separator+"temp.tsv");
                 oldFile.renameTo(newFile);
                 mergeWriter.close();
                 firstReader.close();
                 secondReader.close();
                 return;
             } else if(secondFile == null || secondFile ==".DS_Store" || firstFile == "DocMap.tsv" || firstFile == "Dictionary.tsv") {
-                File oldFile = new File(_options._indexPrefix + "/" + firstFile);
-                File newFile = new File(_options._indexPrefix+"/temp.tsv");
+                File oldFile = new File(_options._indexPrefix + File.separator + firstFile);
+                File newFile = new File(_options._indexPrefix+File.separator+"temp.tsv");
                 oldFile.renameTo(newFile);
                 mergeWriter.close();
                 firstReader.close();
@@ -367,10 +365,10 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
     }
 
     private void constructCompressedFile() throws IOException {
-       String indexFile = "/invertedIndexOccurrence.tsv";
-       String indexFileCompressed = "/invertedIndexCompression.tsv";
-       File outputFile = new File(_options._indexPrefix+indexFileCompressed);
-       ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(_options._indexPrefix+indexFileCompressed));
+        String indexFile = File.separator+"invertedIndexOccurrence.tsv";
+        String indexFileCompressed = File.separator+"invertedIndexCompression.tsv";
+        File outputFile = new File(_options._indexPrefix+indexFileCompressed);
+        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(_options._indexPrefix+indexFileCompressed));
         outputFile.createNewFile();
         try {
 
@@ -393,10 +391,10 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
 
     private void splitFiles() throws FileNotFoundException, IOException {
         String indexFile = "invertedIndexCompression.tsv";
-        StringBuilder firstbuilder = new StringBuilder(_options._indexPrefix).append("/"+indexFile);
+        StringBuilder firstbuilder = new StringBuilder(_options._indexPrefix).append(File.separator+indexFile);
         BufferedReader firstReader = new BufferedReader(new FileReader(firstbuilder.toString()));
 
-        StringBuilder splitbuilder = new StringBuilder(_options._indexPrefix).append("/index1.tsv");
+        StringBuilder splitbuilder = new StringBuilder(_options._indexPrefix).append(File.separator+"index1.tsv");
         BufferedWriter splitWriter = new BufferedWriter(new FileWriter(splitbuilder.toString(), true));
 
         int count = 0, indexCount = 1;
@@ -414,7 +412,7 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
                     count = 0;
                     indexCount++;
                     splitWriter.close();
-                    splitbuilder = new StringBuilder(_options._indexPrefix).append("/index"+indexCount+".tsv");
+                    splitbuilder = new StringBuilder(_options._indexPrefix).append(File.separator+"index"+indexCount+".tsv");
                     splitWriter = new BufferedWriter(new FileWriter(splitbuilder.toString(), true));
                     splitWriter.flush();
                 }
@@ -496,7 +494,7 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
         if(indexLoadCount ==1 ) {
             loadDictionaryAndDocuments();
         }
-        StringBuilder builder = new StringBuilder(_options._indexPrefix).append("/").append("index"+indexLoadCount+".tsv");
+        StringBuilder builder = new StringBuilder(_options._indexPrefix).append(File.separator).append("index"+indexLoadCount+".tsv");
         FileInputStream in = new FileInputStream(builder.toString());
         BufferedReader br = new BufferedReader(new InputStreamReader(in));
         ObjectInputStream ois = new ObjectInputStream(new FileInputStream(builder.toString()));
@@ -551,7 +549,7 @@ public class IndexerInvertedCompressed extends Indexer  implements Serializable 
     }
 
     public void loadDictionaryAndDocuments() throws IOException {
-        StringBuilder builder = new StringBuilder(_options._indexPrefix).append("/").append("documentsAndDict.tsv");
+        StringBuilder builder = new StringBuilder(_options._indexPrefix).append(File.separator).append("documentsAndDict.tsv");
         FileInputStream in = new FileInputStream(builder.toString());
         BufferedReader br = new BufferedReader(new InputStreamReader(in));
         String line = null;
